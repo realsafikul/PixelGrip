@@ -1,6 +1,6 @@
 /**
- * SnapForge Data Models & Interfaces
- * FastStone-Style Screen Capture and Recorder Architecture
+ * PixelGrip Data Models & Interfaces
+ * Precision Screen Capture, Annotation, Video Recorder, and Desktop Measurement Architecture
  */
 
 export type CaptureMode =
@@ -25,10 +25,11 @@ export type OutputKind =
 
 export interface CaptureOptions {
   mode: CaptureMode;
-  delayMs: number;
+  delaySeconds: number;
   includeCursor: boolean;
   fixedSize?: { width: number; height: number };
   maxScrollHeight?: number;
+  monitorIndex?: number;
 }
 
 export interface CaptureResult {
@@ -42,6 +43,17 @@ export interface CaptureResult {
   dpiX: number;
   dpiY: number;
   mode: CaptureMode;
+}
+
+export interface RecentCapture {
+  id: string;
+  imageDataUrl: string;
+  width: number;
+  height: number;
+  title: string;
+  timestamp: string;
+  mode: CaptureMode;
+  sizeKb: number;
 }
 
 export type AnnotationType =
@@ -124,7 +136,15 @@ export interface RecorderSettings {
   countdownSeconds: number;
 }
 
+export interface TraySettings {
+  minimizeToTray: boolean;
+  closeToTray: boolean;
+  startWithWindows: boolean;
+  showNotifications: boolean;
+}
+
 export interface AppSettings {
+  theme: 'dark' | 'light' | 'windows';
   defaultOutput: OutputKind;
   outputFolder: string;
   outputFormat: 'png' | 'jpeg' | 'webp' | 'bmp' | 'pdf';
@@ -134,6 +154,20 @@ export interface AppSettings {
   copyToClipboardAfterCapture: boolean;
   playShutterSound: boolean;
   includeCursorInCapture: boolean;
+  captureDelaySeconds: number; // 0, 3, 5, 10
+  autoRepeatInterval: number;
+  autoRepeatMaxCount: number;
+  tray: TraySettings;
   hotkeys: Record<string, string>;
   recorder: RecorderSettings;
 }
+
+export type UtilityToolType =
+  | 'color-picker'
+  | 'magnifier'
+  | 'ruler'
+  | 'protractor'
+  | 'crosshair'
+  | 'focus'
+  | 'ocr'
+  | 'combine';

@@ -20,7 +20,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onClose,
 }) => {
   const [form, setForm] = useState<AppSettings>({ ...settings });
-  const [activeTab, setActiveTab] = useState<'general' | 'filename' | 'hotkeys'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'filename' | 'hotkeys' | 'tray'>('general');
 
   const previewFilename = formatFilename(form.filenameTemplate, {
     mode: 'Region',
@@ -160,6 +160,52 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     className="accent-sky-500 rounded"
                   />
                   <span>Play audio shutter feedback on capture</span>
+                </label>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'tray' && (
+            <div className="space-y-4">
+              <span className="text-slate-400 block mb-2 font-medium">Windows System Tray & Background Integration:</span>
+              <div className="space-y-2">
+                <label className="flex items-center gap-2.5 p-2.5 rounded-lg bg-slate-950 border border-slate-800 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={form.tray.closeToTray}
+                    onChange={(e) => setForm({ ...form, tray: { ...form.tray, closeToTray: e.target.checked } })}
+                    className="accent-sky-500 rounded"
+                  />
+                  <div>
+                    <div className="font-semibold text-slate-200">Close button hides to System Tray</div>
+                    <div className="text-[10px] text-slate-400">Keeps PixelGrip running quietly in the taskbar notification area</div>
+                  </div>
+                </label>
+
+                <label className="flex items-center gap-2.5 p-2.5 rounded-lg bg-slate-950 border border-slate-800 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={form.tray.minimizeToTray}
+                    onChange={(e) => setForm({ ...form, tray: { ...form.tray, minimizeToTray: e.target.checked } })}
+                    className="accent-sky-500 rounded"
+                  />
+                  <div>
+                    <div className="font-semibold text-slate-200">Minimize window to System Tray</div>
+                    <div className="text-[10px] text-slate-400">Hides window from taskbar when minimized</div>
+                  </div>
+                </label>
+
+                <label className="flex items-center gap-2.5 p-2.5 rounded-lg bg-slate-950 border border-slate-800 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={form.tray.startWithWindows}
+                    onChange={(e) => setForm({ ...form, tray: { ...form.tray, startWithWindows: e.target.checked } })}
+                    className="accent-sky-500 rounded"
+                  />
+                  <div>
+                    <div className="font-semibold text-slate-200">Start PixelGrip on Windows Login</div>
+                    <div className="text-[10px] text-slate-400">Launches minimized to tray when your computer starts</div>
+                  </div>
                 </label>
               </div>
             </div>

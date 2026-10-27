@@ -1,0 +1,985 @@
+# PixelGrip — Complete Desktop App Development Specification
+## Product Goal
+
+Upgrade PixelGrip into a polished, lightweight, professional Windows desktop screenshot, screen recording, image annotation, and capture utility.
+
+The application must combine powerful capture tools with a compact interface, low resource usage, convenient system-tray access, reliable Windows integration, and production-quality implementation.
+
+Do not build a demo, mockup, or collection of non-functional buttons. Every advertised feature must work end-to-end.
+
+---
+
+# 1. FIRST: AUDIT THE EXISTING PROJECT
+
+Before changing any code:
+
+1. Inspect the complete repository, including:
+   - `package.json`
+   - Source files and application entry points
+   - Existing React components
+   - TypeScript types
+   - Vite configuration
+   - CSS and design system
+   - Existing capture and recording logic
+   - Dependencies and assets
+   - Build, packaging, and deployment configuration
+   - Existing tests and documentation
+
+2. Create an audit report identifying:
+   - Features that already work
+   - Features that are partially implemented
+   - Features that are missing
+   - Broken buttons and incomplete workflows
+   - Unnecessary dependencies
+   - Large assets and performance bottlenecks
+   - Browser-only limitations
+   - Native desktop capabilities that are missing
+
+3. Preserve working features and the existing architecture wherever practical.
+
+4. Do not rewrite the entire application unnecessarily.
+
+5. Create a prioritized implementation plan with measurable acceptance criteria.
+
+6. Establish baseline measurements for:
+   - Development and production build success
+   - Packaged installer size
+   - Installed application size
+   - Cold-start time
+   - Idle RAM usage
+   - CPU usage while idle
+   - Screenshot and recording performance
+
+Do not claim an improvement unless it has been measured.
+
+---
+
+# 2. COMPACT AND RESPONSIVE USER INTERFACE
+
+The application currently needs a more compact desktop experience.
+
+## 2.1 Mini Window
+
+Create a small, resizable main window optimized for everyday use.
+
+Requirements:
+
+- Use a compact layout rather than a large dashboard.
+- Display the most frequently used capture actions immediately.
+- Keep unnecessary descriptions, oversized cards, and empty spaces to a minimum.
+- Use compact icons with clear tooltips.
+- Keep text readable at common Windows scaling settings.
+- Support resizing without broken layouts.
+- Remember the last window size and position when appropriate.
+- Prevent the window from reopening off-screen.
+- Respect Windows display scaling and multiple monitors.
+
+Recommended initial layout:
+
+- A compact title bar
+- Capture buttons
+- Recording button
+- Recent captures
+- A small toolbar or navigation area
+- Settings accessible without cluttering the main window
+
+Treat these dimensions as initial design targets, not rigid requirements. Choose the smallest practical default window that keeps the controls understandable.
+
+## 2.2 Expanded Workspace
+
+Some tasks need more room.
+
+Provide an expanded workspace for:
+
+- Image editing
+- Annotation
+- OCR results
+- Video trimming
+- Capture history
+- Settings
+
+The mini window must remain compact when these features are not being used.
+
+## 2.3 Visual Design
+
+Use a consistent, professional Windows-friendly design.
+
+Include:
+
+- Light and dark themes
+- Consistent spacing and typography
+- Clear hover, focus, disabled, and active states
+- Keyboard accessibility
+- Helpful tooltips
+- Empty states
+- Loading states
+- Clear error messages
+- Confirmation for destructive actions
+- No unnecessary animations
+- No fake progress indicators
+
+Do not make the interface visually complicated merely to make it look feature-rich.
+
+---
+
+# 3. SYSTEM TRAY INTEGRATION
+
+Implement a real Windows notification-area system-tray icon using the chosen desktop framework.
+
+A webpage icon or simulated tray button is not sufficient.
+
+## 3.1 Tray Menu
+
+Provide these actions:
+
+- Open PixelGrip
+- Capture Full Screen
+- Capture Selected Region
+- Capture Active Window
+- Start Screen Recording
+- Stop Screen Recording when recording is active
+- Open Recent Captures
+- Open Settings
+- Check for Updates, if update support is implemented
+- Quit PixelGrip
+
+Only display actions that are supported and currently available.
+
+## 3.2 Close and Minimize Behaviour
+
+Add configurable settings:
+
+- Minimize to tray when minimized, if supported by the framework
+- Close button hides the application to the tray
+- Ask for confirmation before exiting during an active recording
+- Quit completely when selected from the tray menu
+
+Requirements:
+
+- Hiding the window must not terminate the application.
+- Tray actions must restore the correct window.
+- The application must not create duplicate tray icons.
+- Recording must not stop unexpectedly when the main window is hidden.
+- Show a visible indication when recording is active.
+- Provide an accessible way to quit if the main window is hidden.
+
+Default behaviour: clicking the window's Close button hides PixelGrip to the system tray. The user can change this behaviour in Settings.
+
+Do not make the application impossible to exit.
+
+## 3.3 Tray Reliability
+
+Test:
+
+- Repeated opening and hiding
+- Multiple monitor setups
+- Display resolution changes
+- Windows Explorer restarting
+- Application shutdown
+- Active recording
+- Tray icon cleanup
+
+Use the desktop framework's actual tray APIs.
+
+---
+
+# 4. STARTUP AND BACKGROUND BEHAVIOUR
+
+Provide optional Windows startup integration.
+
+Requirements:
+
+- A setting to start PixelGrip when the user signs in.
+- Startup disabled by default unless existing user preferences require otherwise.
+- Respect user consent and Windows policies.
+- Do not use unnecessary background services.
+- Do not continuously capture screenshots or record audio/video in the background.
+- Do not keep high-CPU background loops running.
+- Do not request administrator privileges unless a documented feature genuinely requires them.
+
+The app should remain idle and lightweight when no task is active.
+
+---
+
+# 5. SCREEN CAPTURE FEATURES
+
+Implement the following capture modes.
+
+## 5.1 Full Screen Capture
+
+- Capture the intended display.
+- Support multiple monitors.
+- Let the user choose the target monitor where supported.
+- Preserve the original resolution.
+- Handle display scaling correctly.
+- Save or open the result according to user preferences.
+
+## 5.2 Region Capture
+
+- Show a proper selection overlay.
+- Allow the user to select a rectangular region.
+- Show selection dimensions.
+- Support cancel and retry.
+- Provide Escape to cancel.
+- Support pixel-accurate cropping.
+- Handle multiple monitors and mixed display scaling.
+- Allow capture immediately after the selection is confirmed.
+
+## 5.3 Active Window Capture
+
+- Capture the intended foreground window where supported.
+- Handle window borders and shadows consistently.
+- Explain any limitations with elevated or protected windows.
+- Do not report success when the actual capture failed.
+
+## 5.4 Delayed Capture
+
+Provide configurable delay options, such as:
+
+- No delay
+- 3 seconds
+- 5 seconds
+- 10 seconds
+- Custom delay
+
+Show a countdown when appropriate.
+
+## 5.5 Repeat and Automatic Capture
+
+Support scheduled or repeated screenshots.
+
+Requirements:
+
+- Configurable interval
+- Configurable output directory
+- Configurable filename format
+- Optional automatic stopping after a selected number of captures
+- Clear start and stop controls
+- Prevention of accidental unlimited capture
+- Proper handling of disk-space and write errors
+
+Do not run automatic capture without clear user activation.
+
+## 5.6 Scrolling Capture
+
+Implement scrolling capture for supported windows and content.
+
+Requirements:
+
+- Detect or allow the user to select the scrolling target.
+- Stitch captured sections into one image.
+- Reduce visible seams and duplicate content.
+- Provide progress and cancellation.
+- Handle failures gracefully.
+- Clearly document unsupported applications and protected content.
+
+Do not pretend that scrolling capture works universally. Some applications cannot be captured reliably through ordinary desktop APIs.
+
+## 5.7 Multi-Monitor Support
+
+- Select a specific display.
+- Support different resolutions and scaling factors.
+- Correctly calculate screen coordinates.
+- Avoid incorrectly cropped or shifted screenshots.
+- Test monitors arranged vertically, horizontally, and with different scaling settings.
+
+---
+
+# 6. CAPTURE EDITOR AND ANNOTATION
+
+Build a practical image-editing workspace.
+
+## 6.1 Basic Editing
+
+Include:
+
+- Crop
+- Resize
+- Rotate
+- Flip horizontally and vertically
+- Undo and redo
+- Zoom in and out
+- Fit to window
+- Actual-size view
+- Copy image to clipboard
+- Save
+- Save As
+- Export to another supported format
+
+Preserve the original capture until the user explicitly overwrites or replaces it.
+
+## 6.2 Annotation Tools
+
+Include:
+
+- Arrow
+- Line
+- Rectangle
+- Ellipse
+- Freehand drawing
+- Text
+- Numbered markers
+- Highlight
+- Blur or pixelate
+- Fill and outline colours
+- Stroke thickness
+- Font size
+- Undo and redo
+
+Annotation objects should be editable before final export where practical.
+
+Blur and pixelation must be applied to the exported image itself, not merely represented by a transparent overlay.
+
+## 6.3 Clipboard and Drag-and-Drop
+
+Support, where practical:
+
+- Copy image
+- Paste image from clipboard
+- Open an image by dragging it into the editor
+- Drag an exported image into supported applications
+- Copy OCR text
+- Copy selected annotation content where applicable
+
+Display useful error messages for unsupported clipboard formats.
+
+## 6.4 Pin to Screen
+
+Implement a real floating image window that can remain above other windows.
+
+Requirements:
+
+- Pin a captured image to the desktop.
+- Keep it above other windows when requested.
+- Allow moving and resizing.
+- Provide zoom controls.
+- Support multiple pinned images if practical.
+- Provide a close button.
+- Allow the user to unpin or hide an image.
+- Avoid stealing keyboard focus unnecessarily.
+- Clean up pinned windows when the application exits.
+
+Use a native desktop window or supported framework capability. A normal HTML element inside the main window does not satisfy this requirement.
+
+---
+
+# 7. SCREEN RECORDER
+
+Implement actual screen recording using supported desktop capture APIs.
+
+## 7.1 Recording Modes
+
+Provide:
+
+- Full display recording
+- Selected region recording where supported
+- Monitor selection
+- Optional microphone input
+- Optional system audio when supported
+- Optional webcam overlay only if properly implemented
+
+Display a clear recording indicator and elapsed time.
+
+## 7.2 Recording Controls
+
+Include:
+
+- Start
+- Pause and resume, if supported
+- Stop
+- Cancel
+- Elapsed time
+- Output location
+- Recording status
+
+Prevent accidental termination or silent loss of an active recording.
+
+## 7.3 Recording Settings
+
+Allow the user to configure supported options:
+
+- Frame rate
+- Resolution
+- Video format
+- Audio input
+- Microphone volume
+- System audio
+- Output folder
+- Filename template
+
+Expose only settings that the recording backend actually supports.
+
+## 7.4 Audio Handling
+
+- List available microphone devices where supported.
+- Let users select an input device.
+- Clearly indicate whether audio capture is active.
+- Handle permission failures.
+- Handle unavailable or disconnected devices.
+- Do not claim system audio recording works if the selected backend cannot capture it.
+
+## 7.5 Video Processing
+
+Where supported, include:
+
+- Trim start and end
+- Extract audio from video
+- Export audio to MP3 when the required encoder is available and properly licensed
+- Convert video formats where implemented
+- Show real progress for long-running operations
+- Allow cancellation
+- Preserve the original file by default
+
+Use a suitable media-processing backend, such as FFmpeg, only after reviewing packaging, licensing, binary size, security, and redistribution requirements.
+
+Do not bundle every codec or binary unnecessarily.
+
+---
+
+# 8. OCR — CAPTURE TEXT
+
+Implement real optical character recognition.
+
+Requirements:
+
+- Select an area or image.
+- Extract readable text.
+- Display the result in an editable text panel.
+- Copy text to clipboard.
+- Save extracted text to a file.
+- Preserve line breaks where practical.
+- Handle Unicode and Bangla text where the chosen OCR engine supports it.
+- Support English and additional languages through optional language packs where practical.
+- Display a useful error when a language model is missing.
+- Allow users to choose between offline and online processing if both are implemented.
+
+Prefer offline processing when practical for privacy.
+
+Never upload screenshots to an external OCR service without clear disclosure and user consent.
+
+Do not advertise Bangla OCR as supported until it has been tested with real Bangla samples.
+
+---
+
+# 9. IMAGE AND FILE UTILITIES
+
+Implement useful utilities without unnecessarily enlarging the application.
+
+Possible features:
+
+- Image conversion
+- Image resizing
+- Image compression
+- Image dimensions and file information
+- File renaming
+- Clipboard image saving
+- Batch conversion
+- PDF export
+- PDF creation from supported images
+- Capture history
+- Recent files
+
+Use lazy loading for advanced tools.
+
+Do not load every processing library when the application starts.
+
+## PDF Export
+
+- Export captured images to PDF.
+- Support suitable page sizes and orientation.
+- Preserve image quality according to export settings.
+- Handle large images safely.
+- Provide a meaningful error if export fails.
+
+## Batch Operations
+
+- Allow multiple files to be selected.
+- Show the output directory.
+- Prevent accidental overwriting.
+- Report failures per file.
+- Allow cancellation where practical.
+
+---
+
+# 10. CAPTURE HISTORY AND FILE MANAGEMENT
+
+Create a lightweight recent-captures view.
+
+Requirements:
+
+- Display recent captures with thumbnails.
+- Open an image in the editor.
+- Reveal the file in Windows Explorer.
+- Copy the file path.
+- Rename or delete files with confirmation.
+- Filter or search recent captures if practical.
+- Allow users to change the save directory.
+- Handle missing or moved files.
+- Avoid storing unnecessary duplicate image data.
+
+Use a sensible retention policy only when the user explicitly enables it.
+
+Do not silently delete user files.
+
+## File Naming
+
+Support configurable naming patterns, such as:
+
+- PixelGrip_YYYY-MM-DD_HH-mm-ss
+- PixelGrip_Capture_001
+- Custom filename prefix
+
+Prevent collisions and invalid Windows filenames.
+
+---
+
+# 11. HOTKEYS AND QUICK ACCESS
+
+Implement configurable global keyboard shortcuts using the native desktop integration.
+
+Suggested defaults, subject to conflict checks:
+
+- Full Screen Capture
+- Region Capture
+- Active Window Capture
+- Open PixelGrip
+- Start/Stop Recording
+- Cancel Current Operation
+
+Requirements:
+
+- Register shortcuts through the desktop framework.
+- Detect registration conflicts.
+- Allow users to change shortcuts.
+- Provide an option to disable individual shortcuts.
+- Avoid hijacking common Windows shortcuts.
+- Release shortcuts correctly on exit.
+- Display an understandable error when a shortcut cannot be registered.
+
+A keyboard listener inside a webpage is not a substitute for a global shortcut.
+
+---
+
+# 12. SETTINGS AND PREFERENCES
+
+Persist settings between launches.
+
+Include:
+
+- Theme
+- Default capture mode
+- Default save directory
+- File naming pattern
+- Image output format
+- Image quality
+- Capture delay
+- Default monitor
+- Tray behaviour
+- Start with Windows
+- Hotkeys
+- Recording preferences
+- OCR language preferences
+- Notification preferences
+- Update preferences, if supported
+
+Add:
+
+- Restore defaults
+- Settings validation
+- Clear descriptions
+- Safe migration when settings format changes
+
+Never store secrets, API credentials, or unnecessary personal data in plain-text configuration files.
+
+---
+
+# 13. LIGHTWEIGHT BUILD AND SMALL INSTALLER
+
+Reducing application size is a major priority.
+
+## 13.1 Dependency Audit
+
+Review all dependencies.
+
+- Remove unused packages.
+- Remove duplicate libraries.
+- Avoid large libraries for small tasks.
+- Avoid bundling several libraries that perform the same function.
+- Use tree-shaking where supported.
+- Lazy-load large feature modules.
+- Split code into logical chunks.
+- Optimize icons, fonts, and images.
+- Avoid loading recording or OCR libraries on the main screen.
+- Keep development dependencies out of production runtime bundles.
+
+Do not remove a dependency until all usages have been verified.
+
+## 13.2 Desktop Framework
+
+Evaluate Tauri 2 and Electron against the actual requirements.
+
+Compare:
+
+- Installer size
+- Installed size
+- RAM usage
+- Startup time
+- System-tray reliability
+- Global hotkeys
+- Multi-monitor capture
+- Recording and audio support
+- Native window support
+- Build complexity
+- Security
+- Long-term maintenance
+
+Do not switch frameworks solely because one is generally advertised as smaller.
+
+If using Tauri, implement required native functionality through appropriate plugins or Rust commands.
+
+If using Electron, keep the main process minimal and isolate renderer code from privileged operations.
+
+Do not build both frameworks unless there is a clear reason.
+
+## 13.3 Lazy Loading
+
+Load advanced modules only when requested.
+
+Examples:
+
+- OCR module loads when OCR is opened.
+- Video-processing module loads when video processing is requested.
+- PDF export module loads when PDF export is selected.
+- Editor-specific functionality loads when opening the editor.
+
+Lazy loading must not make the first use unreliable or leave buttons permanently loading.
+
+## 13.4 Memory and CPU
+
+- Release temporary image buffers.
+- Dispose of unused media streams.
+- Stop recording tracks when recording ends.
+- Clean up event listeners.
+- Close unnecessary native windows.
+- Avoid repeated full-size image copies.
+- Avoid unnecessary polling.
+- Keep idle CPU usage low.
+- Handle large images without crashing.
+- Avoid memory leaks during repeated capture and editing.
+
+## 13.5 Measure Results
+
+After optimization, report:
+
+- Original installer size
+- New installer size
+- Percentage reduction
+- Installed size
+- Cold-start time
+- Idle RAM usage
+- CPU usage while idle
+- Build and test results
+
+If a feature increases size substantially, explain why and consider optional modules or downloadable components.
+
+Never promise a specific installer size before measuring a real release build.
+
+---
+
+# 14. WINDOWS DESKTOP ARCHITECTURE AND SECURITY
+
+Use a real desktop framework for capabilities that cannot reliably be provided by an ordinary browser application.
+
+Requirements:
+
+- Native system tray
+- Global shortcuts
+- Window management
+- Desktop capture
+- Background operation
+- Windows startup integration
+- Native file dialogs
+- Secure file access
+- Appropriate recording and microphone permissions
+
+Keep the existing React and TypeScript UI if practical.
+
+Use the existing Vite setup as the frontend build system unless the audit identifies a reason to change it.
+
+## Security
+
+- Validate all file paths.
+- Restrict native commands to intended operations.
+- Do not expose unrestricted filesystem access to renderer code.
+- Do not enable unnecessary remote code execution.
+- Keep privileged APIs separate from UI code.
+- Follow the selected framework's security recommendations.
+- Do not collect screenshots, audio, or telemetry without clear user consent.
+- Do not silently upload user content.
+- Protect user files from accidental deletion or overwriting.
+
+---
+
+# 15. ERROR HANDLING AND RELIABILITY
+
+Every operation must report its actual outcome.
+
+Examples:
+
+- Capture succeeds → display the captured image.
+- Save succeeds → confirm the actual saved location.
+- Save fails → show the real error and provide retry options.
+- Recording starts → show the active recording state.
+- Recording stops → verify the output file.
+- OCR fails → explain why, when possible.
+- Hotkey conflicts → inform the user.
+- Tray initialization fails → show a recoverable error.
+- Disk space is insufficient → stop safely and preserve recoverable output.
+
+Do not use fake success notifications.
+
+Do not silently swallow exceptions.
+
+Use structured logging that avoids recording sensitive screenshot content.
+
+---
+
+# 16. ACCESSIBILITY AND USABILITY
+
+- Keyboard navigation
+- Visible focus indicators
+- Screen-reader labels where practical
+- Tooltips for icon-only controls
+- Readable text and contrast
+- Escape to cancel active selection where appropriate
+- Confirmation for destructive actions
+- Clear keyboard shortcuts
+- Predictable window focus
+- Consistent Undo and Redo behaviour
+
+Ensure the application remains usable at different Windows scaling levels.
+
+---
+
+# 17. TESTING REQUIREMENTS
+
+Create automated tests where practical and perform manual Windows desktop testing.
+
+## Functional Tests
+
+Test every major workflow:
+
+1. Launch application.
+2. Open and close the main window.
+3. Hide and restore from tray.
+4. Capture the full screen.
+5. Capture a selected region.
+6. Capture an active window.
+7. Use delayed capture.
+8. Save and reopen an image.
+9. Annotate an image.
+10. Undo and redo edits.
+11. Copy an image to clipboard.
+12. Run OCR.
+13. Start and stop recording.
+14. Confirm recording output is playable.
+15. Test audio when enabled.
+16. Test global hotkeys.
+17. Test pinned images.
+18. Test settings persistence.
+19. Test startup behaviour.
+20. Test clean application exit.
+
+## Performance Tests
+
+- Repeated screenshot capture
+- Large images
+- Long recording sessions
+- Repeated opening and closing of the editor
+- Multiple pinned images
+- Idle operation for an extended period
+- Startup with Windows, when enabled
+- Memory and CPU monitoring
+
+## Compatibility Tests
+
+Test supported Windows versions and:
+
+- Single monitor
+- Multiple monitors
+- Mixed display scaling
+- Display resolution changes
+- Standard and high-DPI displays
+- Paths containing spaces
+- Unicode filenames
+- Missing output folders
+- Restricted file access
+- Low disk space
+
+## Release Tests
+
+- Lint
+- TypeScript validation
+- Automated tests
+- Production frontend build
+- Native desktop build
+- Installer creation
+- Clean installation
+- Application launch after installation
+- Uninstallation
+- No missing runtime dependencies
+- No broken tray icon
+- No fake or non-functional controls
+
+Do not claim a test passed unless it was actually run.
+
+---
+
+# 18. IMPLEMENTATION PHASES
+
+Implement incrementally instead of changing everything at once.
+
+## Phase 1 — Audit and Baseline
+
+- Inspect the project.
+- Identify working and missing features.
+- Measure installer size and runtime performance.
+- Document architectural limitations.
+- Create a task list.
+
+## Phase 2 — Compact UI
+
+- Reduce unnecessary window space.
+- Improve capture toolbar.
+- Implement responsive layouts.
+- Add expanded workspace.
+- Preserve existing features.
+
+## Phase 3 — Native Desktop Integration
+
+- Choose and configure the desktop framework.
+- Add a real system tray.
+- Implement close-to-tray.
+- Add proper Quit behaviour.
+- Implement global shortcuts.
+- Add native window management.
+
+## Phase 4 — Core Capture
+
+- Full-screen capture
+- Region capture
+- Active-window capture
+- Delay
+- Multi-monitor support
+- Output management
+
+## Phase 5 — Editor and Pinning
+
+- Annotation tools
+- Undo/Redo
+- Clipboard
+- Image export
+- Pin-to-screen windows
+
+## Phase 6 — Recording
+
+- Screen recording
+- Audio input
+- Recording controls
+- Output verification
+- Optional video trimming and audio extraction
+
+## Phase 7 — OCR and Utilities
+
+- OCR
+- Image conversion
+- PDF export
+- Capture history
+- Batch utilities
+
+## Phase 8 — Optimization
+
+- Dependency cleanup
+- Lazy loading
+- Memory improvements
+- Installer optimization
+- Performance measurements
+
+## Phase 9 — Final QA
+
+- Functional testing
+- Security review
+- Windows compatibility testing
+- Installer testing
+- Documentation
+- Release notes
+
+After every phase:
+
+1. Run lint.
+2. Run TypeScript checks.
+3. Run available automated tests.
+4. Run the production build.
+5. Test the changed functionality.
+6. Fix regressions before proceeding.
+7. Update the implementation checklist.
+
+Do not move forward with known critical failures.
+
+---
+
+# 19. ACCEPTANCE CRITERIA
+
+The application is ready for release only when:
+
+- The main window is compact and usable.
+- The system tray is real and reliable.
+- Close-to-tray works as configured.
+- The user can quit the application completely.
+- Supported capture modes work.
+- Saving and exporting create valid files.
+- Annotation and Undo/Redo work.
+- Recording produces playable output.
+- Audio controls accurately reflect backend support.
+- OCR produces actual text when supported.
+- Pinned images remain in independent floating windows.
+- Global hotkeys register and work correctly.
+- Settings persist between launches.
+- The application remains responsive during long operations.
+- Idle resource usage has been measured.
+- Installer size has been measured.
+- Security-sensitive operations are appropriately restricted.
+- No major workflow depends on fake buttons or placeholder logic.
+- The production build and packaging process complete successfully.
+
+Features that cannot be implemented reliably must be clearly documented rather than falsely marked complete.
+
+---
+
+# 20. FINAL RESPONSE REQUIRED FROM THE CODING AI
+
+When implementation work is complete, provide:
+
+1. Project audit summary.
+2. Features that were already working.
+3. Features newly implemented.
+4. Files added, removed, or modified.
+5. Dependencies added or removed and the reasons.
+6. Desktop framework decision and justification.
+7. Build and test commands executed.
+8. Actual test results.
+9. Original versus final installer size.
+10. Original versus final startup time and idle RAM usage, if measured.
+11. Known limitations.
+12. Features requiring additional native APIs or optional dependencies.
+13. Exact instructions to build, package, install, and run the application.
+
+Do not claim full completion if any required feature remains incomplete.
+
+## FINAL DEVELOPMENT RULE
+
+First audit the actual repository and create the implementation plan. Then implement the highest-priority features in small, testable stages.
+
+Prioritize a compact interface, a reliable system tray, fast startup, low idle resource usage, real screenshot capture, and stable recording.
+
+Keep the application lightweight without sacrificing reliability or security. Preserve working features, avoid unnecessary rewrites, and verify every feature before marking it complete.

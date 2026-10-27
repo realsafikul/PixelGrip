@@ -18,6 +18,7 @@ interface CaptureOverlayProps {
   onComplete: (result: CaptureResult) => void;
   onCancel: () => void;
   fixedSize?: { width: number; height: number };
+  delaySeconds?: number;
 }
 
 export const CaptureOverlay: React.FC<CaptureOverlayProps> = ({
@@ -27,6 +28,7 @@ export const CaptureOverlay: React.FC<CaptureOverlayProps> = ({
   onComplete,
   onCancel,
   fixedSize = { width: 640, height: 480 },
+  delaySeconds = 0,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -38,6 +40,13 @@ export const CaptureOverlay: React.FC<CaptureOverlayProps> = ({
   const [freehandPoints, setFreehandPoints] = useState<Point[]>([]);
   const [hoveredObject, setHoveredObject] = useState<ScreenObjectZone | null>(null);
   const [colorUnderCursor, setColorUnderCursor] = useState({ hex: '#000000', r: 0, g: 0, b: 0 });
+
+  // Countdown delay state
+  const [remainingDelay, setRemainingDelay] = useState<number>(delaySeconds);
+  const [isCountingDown, setIsCountingDown] = useState<boolean>(delaySeconds > 0);
+
+  // Monitor selector state
+  const [selectedMonitor, setSelectedMonitor] = useState<'primary' | 'secondary' | 'all'>('primary');
 
   // Scrolling stitch progress
   const [isScrollingCapture, setIsScrollingCapture] = useState(false);
@@ -416,6 +425,23 @@ export const CaptureOverlay: React.FC<CaptureOverlayProps> = ({
             {mode === 'Scrolling' && 'Ready to capture scrolling page'}
           </span>
         </div>
+
+        {/* Multi-monitor display selector */}
+        <div className="flex items-center gap-1 bg-slate-950 px-2 py-0.5 rounded border border-slate-800">
+          <span className="text-[10px] text-slate-400">Monitor:</span>
+          {(['primary', 'secondary', 'all'] as const).map((m) => (
+            <button
+              key={m}
+              onClick={() => setSelectedMonitor(m)}
+              className={`px-1.5 py-0.5 rounded text-[10px] capitalize transition-colors ${
+                selectedMonitor === m ? 'bg-sky-600 text-white font-medium' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              {m === 'primary' ? 'Disp 1' : m === 'secondary' ? 'Disp 2' : 'All'}
+            </button>
+          ))}
+        </div>
+
         <div className="text-slate-400">Press <kbd className="px-1.5 py-0.5 bg-slate-800 border border-slate-700 rounded text-slate-200">Esc</kbd> to cancel</div>
         <button
           onClick={onCancel}
@@ -424,6 +450,19 @@ export const CaptureOverlay: React.FC<CaptureOverlayProps> = ({
           <X className="w-4 h-4" />
         </button>
       </div>
+
+      {/* Delay Countdown Overlay */}
+      {isCountingDown && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 z-50 select-none">
+          <div className="w-24 h-24 rounded-full border-4 border-amber-400 bg-amber-500/20 text-white text-5xl font-extrabold flex items-center justify-center animate-ping">
+            {remainingDelay}
+          </div>
+          <span className="text-sm font-semibold text-amber-300 mt-6 tracking-wider uppercase">
+            Capture Countdown Active ({remainingDelay}s)...
+          </span>
+          <span className="text-xs text-slate-400 mt-1">Press Esc to cancel</span>
+        </div>
+      )}
 
       {/* Scrolling capture trigger modal */}
       {mode === 'Scrolling' && (

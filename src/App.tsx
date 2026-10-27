@@ -10,6 +10,8 @@ import {
   AppSettings,
   EditorDocument,
   CaptureResult,
+  RecentCapture,
+  UtilityToolType,
 } from './types';
 import { CapturePanel } from './components/CapturePanel';
 import { CaptureOverlay } from './components/CaptureOverlay';
@@ -19,6 +21,10 @@ import { UtilitiesModal } from './components/UtilitiesModal';
 import { PinnedStickyNote } from './components/PinnedStickyNote';
 import { SettingsModal } from './components/SettingsModal';
 import { WindowsExeExportModal } from './components/WindowsExeExportModal';
+import { MiniWindow } from './components/MiniWindow';
+import { SystemTrayMenu } from './components/SystemTrayMenu';
+import { RecentCapturesDrawer } from './components/RecentCapturesDrawer';
+import { desktopBridge } from './utils/desktopBridge';
 import {
   createSampleDesktopCanvas,
   createSampleScrollingPageCanvas,
@@ -36,9 +42,12 @@ import {
   Eye,
   Sliders,
   Check,
+  Minimize2,
+  Maximize2,
 } from 'lucide-react';
 
 const DEFAULT_SETTINGS: AppSettings = {
+  theme: 'dark',
   defaultOutput: 'Editor',
   outputFolder: 'Pictures/PixelGrip',
   outputFormat: 'png',
@@ -48,6 +57,15 @@ const DEFAULT_SETTINGS: AppSettings = {
   copyToClipboardAfterCapture: true,
   playShutterSound: true,
   includeCursorInCapture: true,
+  captureDelaySeconds: 0,
+  autoRepeatInterval: 5,
+  autoRepeatMaxCount: 10,
+  tray: {
+    minimizeToTray: true,
+    closeToTray: true,
+    startWithWindows: false,
+    showNotifications: true,
+  },
   hotkeys: {
     'Full Screen': 'PrintScreen',
     'Rectangular Region': 'Ctrl+Shift+R',
@@ -72,14 +90,29 @@ const DEFAULT_SETTINGS: AppSettings = {
 export default function App() {
   const [settings, setSettings] = useState<AppSettings>(() => {
     try {
-      const saved = localStorage.getItem('snapforge_settings');
-      return saved ? JSON.parse(saved) : DEFAULT_SETTINGS;
+      const saved = localStorage.getItem('pixelgrip_settings') || localStorage.getItem('snapforge_settings');
+      return saved ? { ...DEFAULT_SETTINGS, ...JSON.parse(saved) } : DEFAULT_SETTINGS;
     } catch {
       return DEFAULT_SETTINGS;
     }
   });
 
   const [outputKind, setOutputKind] = useState<OutputKind>(settings.defaultOutput);
+
+  // View Mode: 'mini' (compact desktop tool) vs 'expanded' (full tabbed editor & tools)
+  const [workspaceView, setWorkspaceView] = useState<'mini' | 'expanded'>('mini');
+  const [isWindowHiddenToTray, setIsWindowHiddenToTray] = useState(false);
+  const [showHistoryDrawer, setShowHistoryDrawer] = useState(false);
+
+  // Recent Captures List
+  const [recentCaptures, setRecentCaptures] = useState<RecentCapture[]>(() => {
+    try {
+      const saved = localStorage.getItem('pixelgrip_recent_captures');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
 
   // Sample desktop fixtures for overlay testing
   const [sampleDesktop, setSampleDesktop] = useState<{
@@ -98,9 +131,7 @@ export default function App() {
   const [showRecorderModal, setShowRecorderModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showExeModal, setShowExeModal] = useState(false);
-  const [activeUtilityTool, setActiveUtilityTool] = useState<
-    'color-picker' | 'magnifier' | 'ruler' | 'crosshair' | 'focus' | 'ocr' | 'combine' | null
-  >(null);
+  const [activeUtilityTool, setActiveUtilityTool] = useState<UtilityToolType | null>(null);
   const [pinnedNotes, setPinnedNotes] = useState<
     { id: string; imageSrc: string; title: string }[]
   >([]);
@@ -251,6 +282,27 @@ export default function App() {
     playCameraShutterSound();
     setActiveCaptureMode(null);
 
+    // Add to Recent Captures history
+    const recentItem: RecentCapture = {
+      id: result.id,
+      imageDataUrl: result.imageDataUrl,
+      width: result.width,
+      height: result.height,
+      title: result.windowTitle || `Capture ${recentCaptures.length + 1}`,
+      timestamp: result.timestamp,
+      mode: result.mode,
+      sizeKb: Math.max(1, Math.round((result.imageDataUrl.length * 0.75) / 1024)),
+    };
+    setRecentCaptures((prev) => {
+      const updated = [recentItem, ...prev.slice(0, 49)];
+      try {
+        localStorage.setItem('pixelgrip_recent_captures', JSON.stringify(updated));
+      } catch {
+        // storage quota fallback
+      }
+      return updated;
+    });
+
     // Copy to clipboard if enabled in settings
     if (settings.copyToClipboardAfterCapture || outputKind === 'Clipboard') {
       try {
@@ -268,7 +320,7 @@ export default function App() {
       const filename = formatFilename(settings.filenameTemplate, {
         mode: result.mode,
         windowTitle: result.windowTitle,
-        appName: 'SnapForge',
+        appName: 'PixelGrip',
         extension: settings.outputFormat,
       });
       const a = document.createElement('a');
@@ -281,7 +333,7 @@ export default function App() {
 
     // Export directly to PDF
     if (outputKind === 'PDF') {
-      await exportImagesToPdf([result.imageDataUrl], `SnapForge_${Date.now()}.pdf`);
+      await exportImagesToPdf([result.imageDataUrl], `PixelGrip_${Date.now()}.pdf`);
       showToast('Exported capture to PDF document');
       return;
     }
@@ -297,7 +349,7 @@ export default function App() {
       return;
     }
 
-    // Default: Open in Tabbed Editor
+    // Default: Open in Tabbed Editor and Expand Workspace
     const newDoc: EditorDocument = {
       id: result.id,
       title: result.windowTitle || `Capture ${documents.length + 1}`,
@@ -314,6 +366,7 @@ export default function App() {
     setDocuments((prev) => [...prev, newDoc]);
     setActiveDocId(newDoc.id);
     setIsEditorOpen(true);
+    setWorkspaceView('expanded');
     showToast(`Captured ${result.width} × ${result.height} px into Editor`);
   };
 
@@ -430,86 +483,190 @@ export default function App() {
         className="hidden"
       />
 
-      {/* TOP DESKTOP CHROME BAR (FastStone Environment Header) */}
-      <header className="h-12 border-b border-slate-800 bg-slate-900/90 backdrop-blur-md px-5 flex items-center justify-between gap-8 z-30">
-        <div className="flex items-center gap-3">
-          <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center shadow-md">
-            <Camera className="w-4 h-4 text-white" />
-          </div>
-          <span className="font-extrabold text-sm tracking-tight text-white whitespace-nowrap">
-            PixelGrip
-          </span>
-          <span className="text-slate-500 text-xs hidden sm:inline">·</span>
-          <span className="text-xs text-slate-400 hidden sm:inline">
-            Precision Screen Capture, Annotation & Recorder Suite
-          </span>
-        </div>
+      {/* TOP DESKTOP CHROME BAR */}
+      {!isWindowHiddenToTray && (
+        <header className="h-12 border-b border-slate-800 bg-slate-900/90 backdrop-blur-md px-5 flex items-center justify-between gap-8 z-30">
+          <div className="flex items-center gap-3">
+            <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center shadow-md">
+              <Camera className="w-4 h-4 text-white" />
+            </div>
+            <span className="font-extrabold text-sm tracking-tight text-white whitespace-nowrap">
+              PixelGrip
+            </span>
+            <span className="text-slate-500 text-xs hidden sm:inline">·</span>
+            <span className="text-xs text-slate-400 hidden sm:inline">
+              Precision Screen Capture & Recorder
+            </span>
 
-        {/* Action button on right */}
-        <div className="flex items-center gap-3 shrink-0">
-          <button
-            onClick={() => setShowExeModal(true)}
-            className="px-3.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium flex items-center gap-1.5 border border-slate-700 transition-colors"
-            title="Download Windows .EXE Build Package & Instructions"
-          >
-            <span className="font-mono text-sky-400 font-bold">.EXE</span>
-            <span>Windows Installer / Build</span>
-          </button>
-          <button
-            onClick={handleCaptureRealDisplay}
-            className="px-3.5 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-xs font-medium flex items-center gap-1.5 shadow transition-colors"
-          >
-            <Monitor className="w-3.5 h-3.5" />
-            <span>Share / Capture Live Display</span>
-          </button>
-        </div>
-      </header>
-
-      {/* MAIN VIEWPORT: DESKTOP SIMULATOR & TESTING STAGE */}
-      <main className="relative flex-1 overflow-hidden bg-[#090d16] flex items-center justify-center p-6">
-        {/* Background Desktop Preview (1440 x 900 interactive canvas mockup) */}
-        {sampleDesktop && (
-          <div className="relative w-full max-w-[1440px] max-h-[860px] aspect-[16/10] rounded-xl overflow-hidden shadow-2xl border border-slate-800/80 bg-slate-900">
-            <img
-              src={sampleDesktop.dataUrl}
-              alt="Desktop Simulation"
-              className="w-full h-full object-contain pointer-events-none"
-            />
-
-            {/* Quick Interactive Tooltip Badges on Desktop */}
-            <div className="absolute top-4 right-4 bg-slate-950/80 border border-slate-700/80 rounded-xl px-4 py-2.5 backdrop-blur-md text-xs space-y-1.5 max-w-xs shadow-xl">
-              <div className="flex items-center gap-2 text-sky-400 font-semibold">
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>PixelGrip Ready</span>
-              </div>
-              <p className="text-[11px] text-slate-300 leading-relaxed">
-                Use the floating <strong>Capture Panel</strong> toolbar below to test Region loupe,
-                Window object detection, Freehand lasso, Scrolling stitch, and Video recording.
-              </p>
+            {/* Mode Switcher */}
+            <div className="hidden md:flex items-center gap-1 bg-slate-950 p-0.5 rounded-lg border border-slate-800 ml-4">
+              <button
+                onClick={() => {
+                  setWorkspaceView('mini');
+                  setIsEditorOpen(false);
+                }}
+                className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
+                  workspaceView === 'mini' && !isEditorOpen
+                    ? 'bg-sky-600 text-white shadow-sm'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                Mini Mode
+              </button>
+              <button
+                onClick={() => {
+                  setWorkspaceView('expanded');
+                  setIsEditorOpen(true);
+                }}
+                className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
+                  workspaceView === 'expanded' || isEditorOpen
+                    ? 'bg-sky-600 text-white shadow-sm'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                Expanded Workspace
+              </button>
             </div>
           </div>
-        )}
-      </main>
 
-      {/* FASTSTONE FLOATING CAPTURE PANEL (Always accessible toolbar) */}
-      <CapturePanel
-        onStartCapture={handleStartCapture}
-        onOpenRecorder={() => setShowRecorderModal(true)}
-        onOpenSettings={() => setShowSettingsModal(true)}
-        onOpenFile={() => fileInputRef.current?.click()}
-        onOpenTool={(tool) => setActiveUtilityTool(tool)}
-        outputKind={outputKind}
-        onChangeOutputKind={setOutputKind}
-        settings={settings}
-        onUpdateSettings={(newPartial) => {
-          const updated = { ...settings, ...newPartial };
-          setSettings(updated);
-          localStorage.setItem('snapforge_settings', JSON.stringify(updated));
-        }}
-        activeTabCount={documents.length}
-        onToggleEditor={() => setIsEditorOpen(!isEditorOpen)}
-        isEditorOpen={isEditorOpen}
-      />
+          {/* Action buttons on right */}
+          <div className="flex items-center gap-2 shrink-0">
+            {/* History drawer trigger */}
+            <button
+              onClick={() => setShowHistoryDrawer(true)}
+              className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium flex items-center gap-1.5 border border-slate-700 transition-colors"
+              title="View Recent Captures History"
+            >
+              <Layers className="w-3.5 h-3.5 text-amber-400" />
+              <span>History</span>
+              {recentCaptures.length > 0 && (
+                <span className="w-4 h-4 rounded-full bg-slate-900 text-sky-400 text-[10px] font-mono flex items-center justify-center font-bold">
+                  {recentCaptures.length}
+                </span>
+              )}
+            </button>
+
+            {/* Windows .EXE Installer modal */}
+            <button
+              onClick={() => setShowExeModal(true)}
+              className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium flex items-center gap-1.5 border border-slate-700 transition-colors"
+              title="Download Windows .EXE Build Package & Instructions"
+            >
+              <span className="font-mono text-sky-400 font-bold">.EXE</span>
+              <span>Windows Build</span>
+            </button>
+
+            {/* Live screen capture */}
+            <button
+              onClick={handleCaptureRealDisplay}
+              className="px-3.5 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-xs font-medium flex items-center gap-1.5 shadow transition-colors"
+            >
+              <Monitor className="w-3.5 h-3.5" />
+              <span>Capture Live Display</span>
+            </button>
+          </div>
+        </header>
+      )}
+
+      {/* MAIN VIEWPORT */}
+      {!isWindowHiddenToTray && (
+        <main className="relative flex-1 overflow-hidden bg-[#090d16] flex items-center justify-center p-6">
+          {/* In Mini Mode: show MiniWindow directly in viewport */}
+          {workspaceView === 'mini' && !isEditorOpen ? (
+            <div className="flex flex-col items-center justify-center gap-6 w-full max-w-xl">
+              <MiniWindow
+                onStartCapture={handleStartCapture}
+                onOpenRecorder={() => setShowRecorderModal(true)}
+                onOpenEditor={() => {
+                  setWorkspaceView('expanded');
+                  setIsEditorOpen(true);
+                }}
+                onOpenHistory={() => setShowHistoryDrawer(true)}
+                onOpenSettings={() => setShowSettingsModal(true)}
+                onOpenTool={(tool) => setActiveUtilityTool(tool)}
+                onOpenFile={() => fileInputRef.current?.click()}
+                outputKind={outputKind}
+                onChangeOutputKind={setOutputKind}
+                settings={settings}
+                onUpdateSettings={(newPartial) => {
+                  const updated = { ...settings, ...newPartial };
+                  setSettings(updated);
+                  localStorage.setItem('pixelgrip_settings', JSON.stringify(updated));
+                }}
+                recentCaptures={recentCaptures}
+                onMinimizeToTray={() => {
+                  desktopBridge.hideToTray();
+                  setIsWindowHiddenToTray(true);
+                  showToast('PixelGrip minimized to notification area system tray');
+                }}
+                onCloseToTray={() => {
+                  if (settings.tray.closeToTray) {
+                    desktopBridge.hideToTray();
+                    setIsWindowHiddenToTray(true);
+                    showToast('PixelGrip running in system tray');
+                  } else {
+                    desktopBridge.quitApp();
+                  }
+                }}
+                onExpandWorkspace={() => {
+                  setWorkspaceView('expanded');
+                  setIsEditorOpen(true);
+                }}
+              />
+
+              {/* Quick tip badge below mini window */}
+              <div className="flex items-center gap-2 text-slate-500 text-xs">
+                <span>FastStone-style desktop capture</span>
+                <span>·</span>
+                <span>Hotkeys: PrtScn (Full), Ctrl+Shift+R (Region)</span>
+              </div>
+            </div>
+          ) : (
+            /* In Expanded Workspace View: show Desktop Simulation with Floating CapturePanel */
+            sampleDesktop && (
+              <div className="relative w-full max-w-[1440px] max-h-[860px] aspect-[16/10] rounded-xl overflow-hidden shadow-2xl border border-slate-800/80 bg-slate-900">
+                <img
+                  src={sampleDesktop.dataUrl}
+                  alt="Desktop Simulation"
+                  className="w-full h-full object-contain pointer-events-none"
+                />
+
+                <div className="absolute top-4 right-4 bg-slate-950/80 border border-slate-700/80 rounded-xl px-4 py-2.5 backdrop-blur-md text-xs space-y-1.5 max-w-xs shadow-xl">
+                  <div className="flex items-center gap-2 text-sky-400 font-semibold">
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>PixelGrip Workspace</span>
+                  </div>
+                  <p className="text-[11px] text-slate-300 leading-relaxed">
+                    Test Region loupe, Window object detection, Freehand lasso, and Scrolling stitch.
+                  </p>
+                </div>
+              </div>
+            )
+          )}
+        </main>
+      )}
+
+      {/* FLOATING CAPTURE PANEL (When in expanded workspace or toggled) */}
+      {!isWindowHiddenToTray && (workspaceView === 'expanded' || isEditorOpen) && (
+        <CapturePanel
+          onStartCapture={handleStartCapture}
+          onOpenRecorder={() => setShowRecorderModal(true)}
+          onOpenSettings={() => setShowSettingsModal(true)}
+          onOpenFile={() => fileInputRef.current?.click()}
+          onOpenTool={(tool) => setActiveUtilityTool(tool)}
+          outputKind={outputKind}
+          onChangeOutputKind={setOutputKind}
+          settings={settings}
+          onUpdateSettings={(newPartial) => {
+            const updated = { ...settings, ...newPartial };
+            setSettings(updated);
+            localStorage.setItem('pixelgrip_settings', JSON.stringify(updated));
+          }}
+          activeTabCount={documents.length}
+          onToggleEditor={() => setIsEditorOpen(!isEditorOpen)}
+          isEditorOpen={isEditorOpen}
+        />
+      )}
 
       {/* CAPTURE OVERLAY (Activated when user clicks any capture mode) */}
       {activeCaptureMode && sampleDesktop && (
@@ -518,6 +675,7 @@ export default function App() {
           desktopDataUrl={sampleDesktop.dataUrl}
           detectedObjects={sampleDesktop.objects}
           fixedSize={captureFixedSize}
+          delaySeconds={settings.captureDelaySeconds}
           onComplete={handleCaptureComplete}
           onCancel={() => setActiveCaptureMode(null)}
         />
@@ -635,6 +793,68 @@ export default function App() {
       {showExeModal && (
         <WindowsExeExportModal onClose={() => setShowExeModal(false)} />
       )}
+
+      {/* RECENT CAPTURES HISTORY DRAWER */}
+      {showHistoryDrawer && (
+        <RecentCapturesDrawer
+          captures={recentCaptures}
+          onOpenInEditor={(item) => {
+            setShowHistoryDrawer(false);
+            const doc: EditorDocument = {
+              id: item.id,
+              title: item.title,
+              baseImageDataUrl: item.imageDataUrl,
+              originalWidth: item.width,
+              originalHeight: item.height,
+              annotations: [],
+              undoStack: [],
+              redoStack: [],
+              timestamp: item.timestamp,
+              isModified: false,
+            };
+            setDocuments((prev) => [...prev, doc]);
+            setActiveDocId(doc.id);
+            setIsEditorOpen(true);
+            setWorkspaceView('expanded');
+          }}
+          onDeleteCapture={(id) => {
+            setRecentCaptures((prev) => {
+              const updated = prev.filter((c) => c.id !== id);
+              localStorage.setItem('pixelgrip_recent_captures', JSON.stringify(updated));
+              return updated;
+            });
+          }}
+          onClearAll={() => {
+            setRecentCaptures([]);
+            localStorage.removeItem('pixelgrip_recent_captures');
+          }}
+          onClose={() => setShowHistoryDrawer(false)}
+        />
+      )}
+
+      {/* SYSTEM TRAY & NOTIFICATION AREA MENU */}
+      <SystemTrayMenu
+        isRecordingActive={showRecorderModal}
+        onOpenApp={() => {
+          setIsWindowHiddenToTray(false);
+          desktopBridge.restoreFromTray();
+        }}
+        onCaptureMode={(mode) => handleStartCapture(mode)}
+        onOpenRecorder={() => setShowRecorderModal(true)}
+        onStopRecorder={() => setShowRecorderModal(false)}
+        onOpenHistory={() => setShowHistoryDrawer(true)}
+        onOpenSettings={() => setShowSettingsModal(true)}
+        onQuitApp={() => {
+          if (confirm('Exit PixelGrip completely?')) {
+            desktopBridge.quitApp();
+          }
+        }}
+        isWindowHidden={isWindowHiddenToTray}
+        onRestoreWindow={() => {
+          setIsWindowHiddenToTray(false);
+          desktopBridge.restoreFromTray();
+        }}
+      />
 
       {/* TOAST FEEDBACK */}
       {toastMessage && (
