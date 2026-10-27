@@ -1,0 +1,6 @@
+{
+  "name": "SnapForge - Screen Capture & Recorder",
+  "description": "FastStone-style screen capture, annotation, screen recording, and image editing suite.",
+  "requestFramePermissions": ["display-capture", "camera", "microphone", "clipboard-read", "clipboard-write"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
