@@ -41,7 +41,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-950/50">
           <h3 className="text-sm font-bold text-white flex items-center gap-2">
             <Sliders className="w-4 h-4 text-sky-400" />
-            <span>SnapForge Preferences & Settings</span>
+            <span>PixelGrip Preferences & Settings</span>
           </h3>
           <button onClick={onClose} className="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-white">
             <X className="w-4 h-4" />

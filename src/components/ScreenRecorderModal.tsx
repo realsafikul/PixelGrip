@@ -235,7 +235,7 @@ export const ScreenRecorderModal: React.FC<ScreenRecorderModalProps> = ({
     if (!recordedVideoUrl) return;
     const a = document.createElement('a');
     a.href = recordedVideoUrl;
-    a.download = `SnapForge_Recording_${Date.now()}.webm`;
+    a.download = `PixelGrip_Recording_${Date.now()}.webm`;
     a.click();
   };
 
@@ -272,7 +272,7 @@ export const ScreenRecorderModal: React.FC<ScreenRecorderModalProps> = ({
     const dataUrl = canvas.toDataURL('image/png');
     const a = document.createElement('a');
     a.href = dataUrl;
-    a.download = `SnapForge_Animation_${Date.now()}.png`;
+    a.download = `PixelGrip_Animation_${Date.now()}.png`;
     a.click();
     setIsExportingGif(false);
   };
@@ -288,7 +288,7 @@ export const ScreenRecorderModal: React.FC<ScreenRecorderModalProps> = ({
                 <Video className="w-4 h-4" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-white">SnapForge Screen Recorder</h3>
+                <h3 className="text-sm font-bold text-white">PixelGrip Screen Recorder</h3>
                 <p className="text-[11px] text-slate-400">Capture desktop, audio tracks, and webcam</p>
               </div>
             </div>
@@ -500,7 +500,7 @@ export const ScreenRecorderModal: React.FC<ScreenRecorderModalProps> = ({
           <div className="flex items-center justify-between px-6 py-3.5 border-b border-slate-800 bg-slate-950/60">
             <div className="flex items-center gap-2">
               <Film className="w-4 h-4 text-sky-400" />
-              <h3 className="text-sm font-bold text-white">SnapForge Video Editor & Trimmer</h3>
+              <h3 className="text-sm font-bold text-white">PixelGrip Video Editor & Trimmer</h3>
             </div>
             <button onClick={onClose} className="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-white">
               <X className="w-4 h-4" />

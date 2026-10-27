@@ -581,7 +581,7 @@ export const TabbedEditor: React.FC<TabbedEditorProps> = ({
                   onClick={() => handleExportFlattened('snf')}
                   className="w-full text-left px-3 py-1.5 hover:bg-slate-800 text-sky-400 hover:text-sky-300 font-medium"
                 >
-                  Save .SNF Project (Lossless)
+                  Save .PGP Project (Lossless)
                 </button>
               </div>
             )}

@@ -153,7 +153,7 @@ export const CapturePanel: React.FC<CapturePanelProps> = ({
           title="Drag capture panel"
         >
           <GripHorizontal className="w-4 h-4" />
-          <span className="font-bold text-xs tracking-wide text-sky-400">SNAPFORGE</span>
+          <span className="font-extrabold text-xs tracking-wide bg-gradient-to-r from-sky-400 to-indigo-400 bg-clip-text text-transparent">PIXELGRIP</span>
         </div>
 
         <div className="w-[1px] h-5 bg-slate-700/60 mx-0.5" />

@@ -19,7 +19,7 @@ export function formatFilename(
   const counter = options?.counter ?? globalCounter++;
   const mode = options?.mode || 'Screen';
   const windowTitle = options?.windowTitle || 'Desktop';
-  const appName = options?.appName || 'SnapForge';
+  const appName = options?.appName || 'PixelGrip';
   const extension = options?.extension ? `.${options.extension.replace(/^\./, '')}` : '.png';
 
   const pad = (n: number, width = 2) => String(n).padStart(width, '0');

@@ -18,6 +18,7 @@ import { ScreenRecorderModal } from './components/ScreenRecorderModal';
 import { UtilitiesModal } from './components/UtilitiesModal';
 import { PinnedStickyNote } from './components/PinnedStickyNote';
 import { SettingsModal } from './components/SettingsModal';
+import { WindowsExeExportModal } from './components/WindowsExeExportModal';
 import {
   createSampleDesktopCanvas,
   createSampleScrollingPageCanvas,
@@ -39,10 +40,10 @@ import {
 
 const DEFAULT_SETTINGS: AppSettings = {
   defaultOutput: 'Editor',
-  outputFolder: 'Pictures/SnapForge',
+  outputFolder: 'Pictures/PixelGrip',
   outputFormat: 'png',
   jpegQuality: 92,
-  filenameTemplate: 'Capture_{yyyy}{MM}{dd}-{HH}{mm}{ss}',
+  filenameTemplate: 'PixelGrip_{yyyy}{MM}{dd}-{HH}{mm}{ss}',
   autoSaveWithoutDialog: false,
   copyToClipboardAfterCapture: true,
   playShutterSound: true,
@@ -96,6 +97,7 @@ export default function App() {
   const [captureFixedSize, setCaptureFixedSize] = useState<{ width: number; height: number } | undefined>();
   const [showRecorderModal, setShowRecorderModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showExeModal, setShowExeModal] = useState(false);
   const [activeUtilityTool, setActiveUtilityTool] = useState<
     'color-picker' | 'magnifier' | 'ruler' | 'crosshair' | 'focus' | 'ocr' | 'combine' | null
   >(null);
@@ -126,7 +128,7 @@ export default function App() {
           type: 'callout',
           bounds: { x: 340, y: 140, width: 230, height: 60 },
           calloutTail: { x: 300, y: 220 },
-          text: 'SnapForge Vector Layer Ready!',
+          text: 'PixelGrip Vector Layer Ready!',
           strokeColor: '#38bdf8',
           fillColor: '#ffffff',
           strokeWidth: 2,
@@ -434,17 +436,25 @@ export default function App() {
           <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center shadow-md">
             <Camera className="w-4 h-4 text-white" />
           </div>
-          <span className="font-bold text-sm tracking-tight text-white whitespace-nowrap">
-            SnapForge
+          <span className="font-extrabold text-sm tracking-tight text-white whitespace-nowrap">
+            PixelGrip
           </span>
           <span className="text-slate-500 text-xs hidden sm:inline">·</span>
           <span className="text-xs text-slate-400 hidden sm:inline">
-            Screen Capture, Annotation & Recorder Suite
+            Precision Screen Capture, Annotation & Recorder Suite
           </span>
         </div>
 
         {/* Action button on right */}
         <div className="flex items-center gap-3 shrink-0">
+          <button
+            onClick={() => setShowExeModal(true)}
+            className="px-3.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium flex items-center gap-1.5 border border-slate-700 transition-colors"
+            title="Download Windows .EXE Build Package & Instructions"
+          >
+            <span className="font-mono text-sky-400 font-bold">.EXE</span>
+            <span>Windows Installer / Build</span>
+          </button>
           <button
             onClick={handleCaptureRealDisplay}
             className="px-3.5 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-xs font-medium flex items-center gap-1.5 shadow transition-colors"
@@ -470,7 +480,7 @@ export default function App() {
             <div className="absolute top-4 right-4 bg-slate-950/80 border border-slate-700/80 rounded-xl px-4 py-2.5 backdrop-blur-md text-xs space-y-1.5 max-w-xs shadow-xl">
               <div className="flex items-center gap-2 text-sky-400 font-semibold">
                 <Sparkles className="w-3.5 h-3.5" />
-                <span>SnapForge Ready</span>
+                <span>PixelGrip Ready</span>
               </div>
               <p className="text-[11px] text-slate-300 leading-relaxed">
                 Use the floating <strong>Capture Panel</strong> toolbar below to test Region loupe,
@@ -619,6 +629,11 @@ export default function App() {
           }}
           onClose={() => setShowSettingsModal(false)}
         />
+      )}
+
+      {/* WINDOWS .EXE BUILD MODAL */}
+      {showExeModal && (
+        <WindowsExeExportModal onClose={() => setShowExeModal(false)} />
       )}
 
       {/* TOAST FEEDBACK */}
